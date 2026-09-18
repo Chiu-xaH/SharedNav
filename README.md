@@ -21,7 +21,7 @@
 
 ## 快速开始
 
-> ⚠️ 本库目前仍处于开发阶段，目前已在[聚在工大](https://github.com/Chiu-xaH/HFUT-Schedule)项目中实际使用，可以体验实际交互效果，看一下里面代码使用方式，再慎重考虑是否接入本库，如有 Bug 及时提。
+> ⚠️ 本库目前仍处于开发阶段，目前在[聚在工大](https://github.com/Chiu-xaH/HFUT-Schedule)项目中使用率较高，可以体验实际交互效果，看一下里面代码使用方式，再慎重考虑是否接入本库，如有 Bug 及时提。
 
 ### 引入依赖
 #### 从 JitPack 引入
@@ -177,6 +177,11 @@ fun HomeScreen() {
 
 ## [接口文档](docs/Developer.md)
 
-## [TODO 安排](docs/Todo.md)
+## [后续安排](docs/Todo.md)
 
 ## [Pull Request 须知(参与本项目)](docs/Rule.md)
+
+## 已接入的项目
+[聚在工大](https://github.com/Chiu-xaH/HFUT-Schedule)
+
+[小小账本](https://github.com/manykofeissssss/android-moneySave)
