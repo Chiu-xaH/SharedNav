@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
 import com.sharednav.common.manager.AnimationSpecManager
 import com.sharednav.common.helper.EnableHelper
@@ -79,6 +80,7 @@ class NavigationController(
     val transitionProgress = Animatable(0f)
 
     companion object {
+        private const val NS_PER_MS = 1_000_000L
         const val DEFAULT_SHARED_MAX_PRECENT = 0.875f
 
         /**
@@ -354,7 +356,9 @@ class NavigationController(
         }
 
         // 设置标志位，开始动画
-        isTransitioning = true
+        waitFrame(transitionEntry!!) {
+            isTransitioning = true
+        }
         transitionProgress.animateTo(targetValue = target, animationSpec = getAnimation())
 
         // 移除栈，置状态
@@ -694,6 +698,37 @@ class NavigationController(
         isTransitioning = false
     }
 
+    var maxWaitFrame = 10
+
+    /**
+     * 流畅度优化
+     */
+    private suspend fun waitFrame(
+        entry: TransitionEntry,
+        onSwap: () -> Unit,
+    ) {
+        // 一定要确保页面切换(onSwap)之后马上等帧(awaitFrame)
+        onSwap()
+        var frameCount = 0
+        var curTime = 0L
+        while (frameCount < maxWaitFrame) {
+            val prevTime = curTime
+            withFrameNanos { curTime = it }
+            frameCount++
+            val time = curTime - prevTime
+            if(
+                // 首次
+                prevTime > 0L &&
+                time <= 16 * NS_PER_MS
+                // 空闲 判断帧间隔是否小于等于16ms
+            ) {
+                LogUtil.debug("${entry.type.name} to ${entry.to.destination.key} : waited for $frameCount frame ${time.toDouble()/NS_PER_MS}ms")
+                return
+            } else {
+                LogUtil.warn("${entry.type.name} to ${entry.to.destination.key} : waiting for $frameCount frame ${time.toDouble()/NS_PER_MS}ms")
+            }
+        }
+    }
 
     init {
         if(_stack.isEmpty()) {

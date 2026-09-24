@@ -311,11 +311,17 @@ class SharedRegistry(
             }
             else -> Unit
         }
+        var lastFrameNanos = 0L
         while (true) {
             // state.isTransiting = true 用于稳住导航不要动，开始测量rect
             // state.isTransiting=true代表此时在打断动画中，rect都不为空，无需再次记录Frame标志
             // state.isTransiting=true时，两个rect一定不为空
-            withFrameNanos { }
+            val frameNanos = withFrameNanos { it }
+            var currentNanos = 0f
+            if (lastFrameNanos != 0L) {
+                currentNanos = (frameNanos - lastFrameNanos) / 1_000_000f
+            }
+            lastFrameNanos = frameNanos
             frameCount++
             val rect = if(isContainer) {
                 state.containerRect
@@ -323,7 +329,12 @@ class SharedRegistry(
                 state.contentRect
             }
             if (rect != null) {
-                LogUtil.info("Pop : waiting for $frameCount frame")
+                // 避峰：如果仍超出16ms，则继续等帧直到不繁忙。危险操作！会降低响应度，应该酌情考虑
+//                if(currentNanos > 16f) {
+//                    LogUtil.warn("Pop : overdue 16ms(from frame${frameCount-1} to frame${frameCount} took ${currentNanos}ms),delay start transition")
+//                    continue
+//                }
+                LogUtil.debug("Pop : waiting for $frameCount frame")
                 return true
             }
             if (frameCount >= waitFrameMaxValue) {
