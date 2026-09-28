@@ -94,9 +94,9 @@ class NavigationController(
 
     private fun getAnimation() =
         if(transitionLevel != EffectLevel.NONE && sharedRegistry?.isRunning == true) {
-            when(transitionEntry!!.type) {
-                ActionType.POP -> popAnimationWithShared()
+            when(transitionEntry?.type) {
                 ActionType.PUSH -> pushAnimationWithShared()
+                else -> popAnimationWithShared()
             }
         } else {
             val transitionMode = current().transitionMode
@@ -116,9 +116,9 @@ class NavigationController(
                 )
             } ?: transitionMode.pushAnimation
 
-            when(transitionEntry!!.type) {
-                ActionType.POP -> newPopAnimation
+            when(transitionEntry?.type) {
                 ActionType.PUSH -> newPushAnimation
+                else -> newPopAnimation
             }
         }
 

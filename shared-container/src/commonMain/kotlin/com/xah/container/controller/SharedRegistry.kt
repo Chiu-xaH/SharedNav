@@ -438,16 +438,15 @@ class SharedRegistry(
     fun canPop() = enabled
 
     fun getRectInterpolator(): RectInterpolator {
-        return if(screenRect == null || quadraticBezierRectInterpolatorVerticalRadio == 0f || quadraticBezierRectInterpolatorHorizontalRadio == 0f) {
+        val screenRect = screenRect
+        val verticalRadio = quadraticBezierRectInterpolatorVerticalRadio
+        val horizontalRadio = quadraticBezierRectInterpolatorHorizontalRadio
+        return if(screenRect == null || verticalRadio == 0f || horizontalRadio == 0f) {
             // 线性路径
             LinearRectInterpolator
         } else {
             // 二次贝塞尔路径
-            QuadraticBezierRectInterpolator(
-                screenRect!!,
-                quadraticBezierRectInterpolatorVerticalRadio,
-                quadraticBezierRectInterpolatorHorizontalRadio,
-            )
+            QuadraticBezierRectInterpolator(screenRect, verticalRadio, horizontalRadio)
         }
     }
 }

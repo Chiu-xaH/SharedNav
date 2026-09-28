@@ -822,19 +822,9 @@ adb shell am start -a android.intent.action.VIEW -d "your_app://settings_bezier"
 | 镜面缩放（共享容器运行时） | API 33 | 背景直接做 scale 缩放         |
 | 预测式返回手势       | API 33 | 不启用，退化为普通返回            |
 
-### 10.3 常见问题
-
-**Q：点击后没有容器共享动画？**
-- 检查 `SharedContainer` 的 `key` 与目标 `Destination.key` 是否完全一致。
-- 确认使用的是 `SharedNavHost` 而非 `NavHost`。
-- 检查 `registry.enabled` 是否为 `true`，以及 `navController.transitionLevel` 是否为 `NONE`（`NONE` 等级会跳过容器共享）。
-
-**Q：多个容器共用同一个页面？**
-- 为 `Destination` 增加一个来源字段（如 `origin`），将 `key` 区分开，保证每个容器对应唯一的 `key`，不可重复。
-
-**Q：共享动画在 POP 时不触发，直接跳过？**
-- 可能是目标页面（前一页）的容器尚未加载完成，超过了 `waitFrameMaxValue` 帧数限制，导致降级为普通导航动画。适当调大 `registry.waitFrameMaxValue`，或使用 `enableKeepAlive` 保留页面。
-
-**Q：浮层弹出后背景页没有缩放/模糊效果？**
-- 检查是否使用了 `SharedNavHost`（或手动添加了 `FloatingRoot`）。
-- 如有自定义 `FloatingRoot`，检查 `backgroundEffect.pageEffect` 的 `scale`/`blur`/`mask` 配置是否为默认值。
+启用预测式返回需在清单文件配置好：
+```xml
+<application
+    android:enableOnBackInvokedCallback="true"
+></application>
+```
