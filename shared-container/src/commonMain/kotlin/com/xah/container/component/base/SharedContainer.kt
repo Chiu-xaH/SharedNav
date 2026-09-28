@@ -16,8 +16,13 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sharednav.common.helper.ScreenCornerHelper
@@ -175,16 +180,6 @@ private fun Modifier.sharedContainer(
                 right = position.x + size.width,
                 bottom = position.y + size.height
             )
-//            val visualRect = coordinates.boundsInRoot()
-//            LogUtil.debug(
-//                """
-//                    ${state.key}:
-//                    positionInRoot=${coordinates.positionInRoot()};
-//                    boundsInRoot=${coordinates.boundsInRoot()};
-//                    final=${finalRect}
-//                """.trimIndent()
-//            )
-
             state.containerRect = layoutRect
         }
 }
