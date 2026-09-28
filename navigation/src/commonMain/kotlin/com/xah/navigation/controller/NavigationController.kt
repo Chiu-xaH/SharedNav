@@ -170,8 +170,26 @@ class NavigationController(
 
             when (launchMode) {
                 is LaunchMode.Push -> {
-                    // 解析 keepPreviousAlive：null 时跟随 from.keepAlive，若栈空则跟随 enableKeepAlive
-                    val keepPreviousAlive = launchMode.keepPreviousAlive ?: from.keepPreviousAlive
+                    // 解析 keepPreviousAlive：null 时跟随 from.keepAlive，若栈空则跟随 enableKeepAlive；若为false则关注上一个是否也为false，防止发生链式断裂
+                    val previousKeepPreviousAlive = from.keepPreviousAlive
+                    val keepPreviousAlive = when(previousKeepPreviousAlive) {
+                        true -> {
+                            // true [true] √
+                            // true [false] × 链式断裂
+                            // true [null] 跟随为true
+                            when(launchMode.keepPreviousAlive) {
+                                true -> true
+                                false -> throw Exception("发生链式断裂，不允许在keepPreviousAlive=true的项目中，继续PUSH keepPreviousAlive=false的项目")
+                                null -> previousKeepPreviousAlive
+                            }
+                        }
+                        false -> {
+                            // false [true] √
+                            // false [false] √
+                            // false [null] 跟随为false
+                            launchMode.keepPreviousAlive ?: previousKeepPreviousAlive
+                        }
+                    }
 
                     if(launchMode.reuse) {
                         // 如果栈顶是目标项目，则复用
