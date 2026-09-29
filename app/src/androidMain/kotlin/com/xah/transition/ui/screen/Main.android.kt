@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import com.sharednav.common.helper.ScreenCornerHelper
-import com.xah.transition.util.PlatformView
+import com.sharednav.common.kmp.PlatformView
 
 actual fun getDefaultScreenCorner(view : PlatformView): Float = ScreenCornerHelper(view.view).getCornerDp().value
 

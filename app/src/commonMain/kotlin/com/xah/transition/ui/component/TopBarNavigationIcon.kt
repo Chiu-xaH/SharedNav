@@ -41,9 +41,9 @@ import com.xah.navigation.model.action.LaunchMode
 import com.xah.navigation.util.LocalNavController
 import com.xah.transition.ui.screen.nav.destination.ControlCenterDestination
 import com.xah.transition.ui.style.effect.ControlCenterTransitionEffect
-import com.xah.transition.ui.util.LocalPlatformActivity
+import com.sharednav.common.kmp.LocalPlatformActivity
 import com.xah.transition.ui.screen.nav.destination.base.NavDestination
-import com.xah.transition.util.PlatformActivity
+import com.sharednav.common.kmp.PlatformActivity
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import sharednav.app.generated.resources.Res

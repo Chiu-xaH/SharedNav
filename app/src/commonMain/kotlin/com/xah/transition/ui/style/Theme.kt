@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.sharednav.common.kmp.PlatformContext
-import com.xah.transition.ui.util.LocalPlatformContext
+import com.sharednav.common.kmp.LocalPlatformContext
 
 expect val CAN_DYNAMIC_COLOR : Boolean
 

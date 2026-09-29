@@ -1,10 +1,13 @@
 package com.xah.floating.component
 
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
+import com.sharednav.common.helper.EnableHelper
+import com.sharednav.common.kmp.LocalPlatformContext
 import com.sharednav.common.util.LogUtil
 import com.xah.container.model.SharedContainerState
 import com.xah.container.util.LocalSharedRegistrySafely
@@ -16,7 +19,9 @@ actual fun FloatingBackHandler() {
     val controller = LocalFloatingControllerSafely.current ?: return
     val registry = LocalSharedRegistrySafely.current
     val canPop = controller.isRunning
-    if(registry?.enablePredictiveBack == true && Build.VERSION.SDK_INT >= 33) {
+    val context = LocalPlatformContext()
+
+    if(registry?.enablePredictiveBack == true && EnableHelper.canPredictedGesture) {
         PredictiveBackHandler(enabled = canPop) { backEvents ->
             var state : SharedContainerState? = null
             try {

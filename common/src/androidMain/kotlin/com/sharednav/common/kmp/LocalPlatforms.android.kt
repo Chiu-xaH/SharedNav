@@ -1,12 +1,9 @@
-package com.xah.transition.ui.util
+package com.sharednav.common.kmp
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import com.sharednav.common.kmp.PlatformContext
-import com.xah.transition.util.PlatformActivity
-import com.xah.transition.util.PlatformView
 
 @Composable
 actual fun LocalPlatformActivity(): PlatformActivity {

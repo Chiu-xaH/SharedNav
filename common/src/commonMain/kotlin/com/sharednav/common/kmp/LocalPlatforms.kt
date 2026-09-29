@@ -1,9 +1,6 @@
-package com.xah.transition.ui.util
+package com.sharednav.common.kmp
 
 import androidx.compose.runtime.Composable
-import com.sharednav.common.kmp.PlatformContext
-import com.xah.transition.util.PlatformActivity
-import com.xah.transition.util.PlatformView
 
 @Composable
 expect fun LocalPlatformActivity() : PlatformActivity
