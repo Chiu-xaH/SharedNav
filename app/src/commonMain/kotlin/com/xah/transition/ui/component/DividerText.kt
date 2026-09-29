@@ -37,6 +37,7 @@ import com.xah.container.component.base.SharedContent
 import com.xah.container.model.ContentStrategy
 import com.xah.container.util.LocalSharedRegistry
 import com.sharednav.common.helper.NoneRoundShape
+import com.xah.container.component.base.sharedContainer
 
 val ANIMATION_SPEED = 400
 val DIVIDER_TEXT_VERTICAL_PADDING = 9.dp
@@ -44,6 +45,21 @@ val DIVIDER_TEXT_VERTICAL_PADDING = 9.dp
 @Composable
 fun DividerText(
     text: String,
+    style : TextStyle = LocalTextStyle.current,
+    contentColor : Color = MaterialTheme.colorScheme.primary,
+    onClick: (() -> Unit?)? = null
+) = DividerText(
+    text = text,
+    style = style,
+    contentColor = contentColor,
+    onClick = onClick,
+    modifier = Modifier
+)
+
+@Composable
+private fun DividerText(
+    text: String,
+    modifier: Modifier = Modifier,
     style : TextStyle = LocalTextStyle.current,
     contentColor : Color = MaterialTheme.colorScheme.primary,
     onClick: (() -> Unit?)? = null
@@ -63,7 +79,7 @@ fun DividerText(
         text = text,
         style = style,
         color = color,
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = APP_HORIZONTAL_DP , vertical = DIVIDER_TEXT_VERTICAL_PADDING)
             .clickable { onClick?.invoke() }
             .pointerInput(Unit) {
@@ -82,6 +98,7 @@ fun DividerText(
             .scale(scale.value)
     )
 }
+
 
 // 按压小标题展开/收起下面内容
 @Composable
@@ -109,14 +126,13 @@ fun DividerTextExpandedWithShared(
     }
 
 
-    SharedContainer(
-        key = key,
-        shape = NoneRoundShape,
-    ) {
-        DividerText(text,style,contentColor, onClick = {
-            set()
-        })
-    }
+    DividerText(
+        text = text,
+        modifier = Modifier.sharedContainer(key,NoneRoundShape),
+        style = style,
+        contentColor = contentColor,
+        onClick = { set() },
+    )
 
     AnimatedVisibility(
         enter = scaleIn(animationSpec = registry.getPushAnimation()) + expandIn(expandFrom = Alignment.BottomCenter,animationSpec = registry.getPushAnimation()),

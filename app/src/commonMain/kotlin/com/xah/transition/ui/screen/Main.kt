@@ -139,6 +139,7 @@ import com.xah.transition.ui.util.LocalPlatformContext
 import com.xah.transition.ui.util.LocalPlatformView
 import com.xah.transition.ui.screen.nav.destination.base.NavDestination
 import com.xah.transition.ui.holder.GlobalUiStateHolder
+import com.xah.transition.ui.screen.nav.destination.FloatingWindowDestination
 import com.xah.transition.ui.style.TransitionTheme
 import com.xah.transition.util.PermissionSet
 import com.xah.transition.util.PlatformView
@@ -385,6 +386,27 @@ fun HomeScreen() {
                                     imagePicker.launch()
                                 }
                             )
+                        }
+                    }
+                    item {
+                        Box(modifier = Modifier.padding(CARD_NORMAL_DP*2)) {
+                            val dest = FloatingWindowDestination(1)
+                            Card(
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier.sharedContainer(dest.key,MaterialTheme.shapes.small),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                            ) {
+                                TransplantListItem(
+                                    headlineContent = { Text("FloatingWindowDestination") },
+                                    modifier = Modifier.clickable {
+                                        navController.push(
+                                            dest,
+//                                            effect = RollTransitionEffect(clip = false),
+                                            launchMode = LaunchMode.Push(keepPreviousAlive = true)
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                     item {
