@@ -18,6 +18,12 @@ abstract class Destination {
      * POP时不显示PlaceHolder，POP瞬间抓取一张冻结的ImageBitmap显示并返回，最大限度地降低动效卡顿
      */
     open val PlaceHolder: (@Composable () -> Unit)? = null
+
+    /**
+     * 是否允许横屏旋转，null则交给上层判断
+     */
+    open val requestedOrientation : Int? = null
+
     // ...可扩展
 
     @Composable

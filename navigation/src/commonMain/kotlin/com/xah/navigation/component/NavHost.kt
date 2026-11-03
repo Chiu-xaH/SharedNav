@@ -101,6 +101,8 @@ private fun NavHost(
         navController.sharedRegistry = registry
     }
 
+    ScreenOrientationEffect()
+
     CompositionLocalProvider(
         LocalNavControllerSafely provides navController,
         LocalNavController provides navController,
