@@ -1,6 +1,7 @@
 package com.xah.navigation.controller
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.tween
@@ -36,6 +37,7 @@ import kotlin.math.pow
 class NavigationController(
     private val scope: CoroutineScope,
     val startDestination: Destination,
+    val transitionProgress : Animatable<Float, AnimationVector1D> = Animatable(0f),
     private val _stack: SnapshotStateList<StackEntry> = mutableStateListOf(),
     val sharedTransitionEffect: TransitionEffect,
     var sharedRegistry : SharedRegistry? = null,
@@ -75,8 +77,6 @@ class NavigationController(
      * 是否允许在预测式手势时，背景也跟随手指进行进度变化，否则将恒为1f直到松手才开始变化
      */
     internal var enablePredictiveBackBackgroundFollow by mutableStateOf(false)
-
-    val transitionProgress = Animatable(0f)
 
     companion object {
         const val DEFAULT_SHARED_MAX_PRECENT = 0.875f

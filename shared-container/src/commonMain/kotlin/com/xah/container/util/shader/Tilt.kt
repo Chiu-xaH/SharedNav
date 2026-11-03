@@ -1,70 +1,36 @@
 package com.xah.container.util.shader
 
 import androidx.compose.ui.graphics.RenderEffect
+import com.sharednav.common.util.LogUtil
 import com.xah.shader.skia.RuntimeShader
 import com.xah.shader.skia.RuntimeShaderEffect
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * iOS26 风格的非线性扭曲（软体拖拽）
  *
- * 与「倾斜(rotationX/rotationY)」共用同一套方向与强度语义：
- * - rotationY 决定横向被拖拽的方向：>= 0 拖向右，< 0 拖向左
- * - rotationX 决定纵向被拖拽的方向：>= 0 拖向上，< 0 拖向下
- * 二者的绝对值除以 [maxTilt] 得到该轴的形变强度 0~1。
- *
- * 形变模型（"两边弯、两边直"）：
- *
- * 核心约束：
- *   - 平行于拖拽方向的两条边 → 保持直线
- *   - 垂直于拖拽方向的两条边 → 弯成曲线
- *
- * 实现原理：
- *   纯纵向拉伸（dir.x=0, dir.y≠0）为例——
- *   · disp.y（沿拖拽轴）：由 gy 控制拉多拉少（拖拽边多、对边少），与 x 无关
- *     → 同一列各行位移不同，上/下边弯曲 ✓
- *     → 但 disp.y 此时与 x 无关，左右边每行位移相同，仍是直线 ✓
- *   · disp.x（垂直于拖拽轴）：颈缩，让中间的内容向中线靠拢、两侧不动
- *     → disp.x 必须随 y 变化（靠近拖拽边时收拢越多）
- *     → 对于左右两条竖边（x=0 和 x=W），颈缩量相同（关于中线对称）→ 竖边仍直线 ✓
- *     → 对于上下两条横边（y=0 和 y=H）：下边 gy≈0 几乎没有颈缩，上边 gy=1 颈缩最强
- *       → 横边各点 x 位移不同 → 上下边弯曲 ✓
- *
- * 斜向拉伸（dir.x≠0, dir.y≠0）：两轴叠加，形变集中到拖拽方向的那个角。
- *
- * @param rotationX X 轴旋转值，控制纵向拖拽方向与强度
- * @param rotationY Y 轴旋转值，控制横向拖拽方向与强度
- * @param width  形变区域宽度（px）
- * @param height 形变区域高度（px）
- * @param isHorizontal
- *        - true  只做纵向形变（左右边直，上下边弯）
- *        - false 只做横向形变（上下边直，左右边弯）
- *        - null  双轴自由形变
  * @param warpCurve 扭曲曲线，1f 线性，< 1f 更软，> 1f 更集中在拖拽边
- * @param maxTilt 强度归一化基准，应与 SharedRegistry.tiltMaxValue 保持一致
  * @param pullAmount 沿拖拽方向的最大位移比例
- * @param neckAmount 颈缩强度（垂直于拖拽轴的收拢），0f 关闭
  */
 fun genieWarpEffect(
     rotationX: Float,
     rotationY: Float,
     width: Float,
     height: Float,
+    maxTilt: Float,
     isHorizontal: Boolean? = null,
     warpCurve: Float = 0.5f,
-    maxTilt: Float = 20f,
-    pullAmount: Float = 0.14f,
-    neckAmount: Float = 0.7f,
-    neckBias: Float = 3f,   // 颈缩焦点偏移系数：0 始终居中（对称），1 最大偏向拖拽侧（差距最大）
+    pullAmount: Float = 0.15f,
+    neckBias: Float = 2f,   // 颈缩焦点偏移系数：0 始终居中（对称），1 最大偏向拖拽侧（差距最大）
 ): RenderEffect {
     val shader = RuntimeShader(GENIE_WARP_AGSL.trimIndent())
 
     val dirX = if (rotationY >= 0f) 1f else -1f
     val dirY = if (rotationX >= 0f) -1f else 1f
 
-    val base = if (maxTilt > 0f) maxTilt else 1f
-    val magX = (abs(rotationY) / base).coerceIn(0f, 1f)
-    val magY = (abs(rotationX) / base).coerceIn(0f, 1f)
+    val magX = (abs(rotationY) / maxTilt).coerceIn(0f, 1f)
+    val magY = (abs(rotationX) / maxTilt).coerceIn(0f, 1f)
 
     val axisMode = when (isHorizontal) {
         true -> 2f   // 只做纵向：左右边直，上下边弯
@@ -72,10 +38,17 @@ fun genieWarpEffect(
         null -> 0f
     }
 
+    val magnitude = sqrt(magX * magX + magY * magY)
+    val neckAmount = if (magnitude > 0f) {
+        minOf(magX, magY) / magnitude
+    } else {
+        0f
+    }
+
     shader.setFloatUniform("size", width, height)
     shader.setFloatUniform("dir", dirX, dirY)
     shader.setFloatUniform("mag", magX, magY)
-    shader.setFloatUniform("warpCurve", warpCurve.coerceAtLeast(0.001f))
+    shader.setFloatUniform("warpCurve", warpCurve)
     shader.setFloatUniform("neckBias", neckBias)
     shader.setFloatUniform("axisMode", axisMode)
     shader.setFloatUniform("pullAmount", pullAmount)

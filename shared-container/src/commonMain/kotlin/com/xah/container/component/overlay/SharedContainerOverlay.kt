@@ -159,6 +159,7 @@ fun SharedContainerOverlay() {
                                 roY,
                                 parent.width,
                                 parent.height,
+                                registry.tiltMaxValue,
                                 if(is2) isHorizontal else null,
                             )
                         } else {

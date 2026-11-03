@@ -48,6 +48,7 @@ fun rememberNavController(
         NavigationController(
             scope,
             startDestination,
+            navViewModel.transitionProgress,
             navViewModel.stack,
             sharedTransitionEffect,
             null
