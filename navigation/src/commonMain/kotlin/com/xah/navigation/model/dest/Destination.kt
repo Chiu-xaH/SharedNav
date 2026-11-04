@@ -22,7 +22,7 @@ abstract class Destination {
     /**
      * 是否允许横屏旋转，null则交给上层判断
      */
-    open val requestedOrientation : Int? = null
+    open val orientation : Int? = null
 
     // ...可扩展
 

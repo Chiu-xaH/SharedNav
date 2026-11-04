@@ -12,7 +12,7 @@ data object BezierSettingsDestination : NavDestination() {
     override val title: String = "动画曲线设置"
     override val key = "settings_bezier"
     override val icon = Res.drawable.ic_animation
-    override val requestedOrientation = PlatformRequestedOrientation.SCREEN_ORIENTATION_PORTRAIT
+    override val orientation = PlatformRequestedOrientation.SCREEN_ORIENTATION_PORTRAIT
 
     @Composable
     override fun Content() {
