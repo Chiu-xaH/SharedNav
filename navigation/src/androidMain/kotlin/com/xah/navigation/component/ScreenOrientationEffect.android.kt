@@ -7,7 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import com.sharednav.common.util.LogUtil
 import com.xah.navigation.util.LocalNavController
 
-private var initialRequestedOrientation : Int? = null
+private var initialOrientation : Int? = null
 
 @Composable
 internal actual fun ScreenOrientationEffect() {
@@ -19,12 +19,12 @@ internal actual fun ScreenOrientationEffect() {
         if(activity == null) {
             return@LaunchedEffect
         }
-        if(initialRequestedOrientation == null) {
-            initialRequestedOrientation = activity.requestedOrientation
+        if(initialOrientation == null) {
+            initialOrientation = activity.requestedOrientation
         }
         navController.awaitTransition()
         val destination = navController.currentDestination()
-        (destination.requestedOrientation ?: initialRequestedOrientation)?.let {
+        (destination.orientation ?: initialOrientation)?.let {
             LogUtil.debug("设置requestedOrientation=${it}")
             activity.requestedOrientation = it
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
