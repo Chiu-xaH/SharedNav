@@ -1,6 +1,5 @@
 package com.xah.navigation.component
 
-import android.content.pm.ActivityInfo
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +26,6 @@ internal actual fun ScreenOrientationEffect() {
         (destination.orientation ?: initialOrientation)?.let {
             LogUtil.debug("设置requestedOrientation=${it}")
             activity.requestedOrientation = it
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 }
