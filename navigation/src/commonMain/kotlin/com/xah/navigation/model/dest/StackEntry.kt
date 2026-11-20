@@ -25,4 +25,12 @@ class StackEntry(
     }
 
     override fun equals(other: Any?): Boolean = (other as? StackEntry)?.id == this.id
+
+    override fun hashCode(): Int {
+        var result = keepPreviousAlive.hashCode()
+        result = 31 * result + destination.hashCode()
+        result = 31 * result + transitionMode.hashCode()
+        result = 31 * result + id.hashCode()
+        return result
+    }
 }

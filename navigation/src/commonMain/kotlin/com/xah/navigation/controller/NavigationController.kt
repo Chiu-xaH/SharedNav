@@ -466,22 +466,26 @@ class NavigationController(
      */
     suspend fun awaitTransition() = snapshotFlow { isTransitioning }.filter { !it }.first()
 
-    fun current() : StackEntry = _stack.last()
+    fun current() = _stack.last()
 
     val current by derivedStateOf { _stack.last() }
 
-    fun currentDestination() : Destination = current().destination
+    fun previousIsAlive() = current().keepPreviousAlive
+
+    val previousIsAlive by derivedStateOf { _stack.last().keepPreviousAlive }
+
+    fun currentDestination() = current().destination
 
     val currentDestination by derivedStateOf { _stack.last().destination }
 
-    fun isCurrentDestination(destination : Destination) : Boolean = currentDestination() == destination
+    fun isCurrentDestination(destination : Destination) = currentDestination() == destination
 
     /**
      * n=1时为上一个
      * n=2时为上上个
      * ...
      */
-    fun previous(n : Int = 1) : StackEntry? = _stack.getOrNull(_stack.lastIndex - n)
+    fun previous(n : Int = 1) = _stack.getOrNull(_stack.lastIndex - n)
 
     val previous by derivedStateOf { _stack.getOrNull(_stack.lastIndex - 1) }
 
@@ -490,7 +494,7 @@ class NavigationController(
      * n=2时为上上个
      * ...
      */
-    fun previousDestination(n : Int = 1) : Destination? = previous(n)?.destination
+    fun previousDestination(n : Int = 1) = previous(n)?.destination
 
     val previousDestination by derivedStateOf { _stack.getOrNull(_stack.lastIndex - 1)?.destination }
 
@@ -518,7 +522,7 @@ class NavigationController(
         return@derivedStateOf null
     }
 
-    fun previousNotAliveDestination() : Destination? = previousNotAlive()?.destination
+    fun previousNotAliveDestination() = previousNotAlive()?.destination
 
     val previousNotAliveDestination by derivedStateOf {
         for (i in _stack.lastIndex - 1 downTo 1) {
@@ -530,17 +534,13 @@ class NavigationController(
         return@derivedStateOf null
     }
 
-    fun canPop() : Boolean = _stack.size > 1
+    fun canPop() = _stack.size > 1
 
     val canPop by derivedStateOf { _stack.size > 1 }
 
-    private fun contains(destination: Destination) : StackEntry? {
-        return _stack.find { it.destination == destination }
-    }
+    private fun contains(destination: Destination) = _stack.find { it.destination == destination }
 
-    fun containsDestination(destination: Destination) : Boolean {
-        return contains(destination) != null
-    }
+    fun containsDestination(destination: Destination) = contains(destination) != null
 
     // 清空栈并压入
     private fun createAndPushClearly(
