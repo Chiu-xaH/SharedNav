@@ -15,7 +15,7 @@ package com.xah.navigation.model.dest
  *
  * ...
  *
- * 虽然格式要求很激进，但这样可以降低开发和管理成本，不让安卓项目趋于网页化
+ * 虽然格式要求很激进，但这样可以降低开发和管理成本
  */
 class DeepLink<D : Destination>(
     val host: String,
