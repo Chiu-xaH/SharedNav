@@ -6,7 +6,7 @@
 支持平台：Wasm(JS)、Desktop(JVM)、iOS、Android
 ![cover](src/cover.jpg)
 
-## [Demo App](https://github.com/Chiu-xaH/SharedNav/releases/download/1.0.0-dev01/app-release.apk)
+## [Demo App](https://github.com/Chiu-xaH/SharedNav/releases/Develop)
 ### Demo 编译
 ```bash
 ./gradlew :app:wasmJsBrowserDevelopmentRun 

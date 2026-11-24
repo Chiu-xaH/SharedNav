@@ -1,0 +1,228 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+env:
+  DEV_TAG: "Develop"
+  APP_NAME: "demo-app-dev"
+  JAVA_VERSION: "17"
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT"
+          # runner 镜像已预装 cmdline-tools，直接用，避开 setup-android 去装已下架的 tools 包
+          SDKMANAGER=$(ls -d "$SDK_ROOT"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::找不到 sdkmanager，检查 runner 镜像的 Android SDK"
+            exit 1
+          fi
+          echo "SDKMANAGER=$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          # compileSdk = 36（见 gradle/libs.versions.toml: maxAndroidVersion）
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" || {
+            echo "::warning::sdkmanager 安装失败，交给 AGP 自动下载 SDK 组件"
+          }
+
+      - name: Cache debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
+      - name: Build release APK
+        shell: bash
+        run: |
+          chmod +x gradlew
+          # 若 R8 在这个工程上另有问题，把 assembleRelease 换成 assembleDebug 即可
+          ./gradlew :app:assembleRelease --stacktrace \
+            -PappVersionName="$APP_NAME" \
+            -PappVersionCode="${GITHUB_RUN_NUMBER:-1}"
+
+      - name: Collect artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/$APP_NAME.apk"
+          ls -lh dist
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    name: iOS App
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Build iOS app (unsigned)
+        shell: bash
+        run: |
+          chmod +x gradlew
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -target iosApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -arch arm64 \
+            SYMROOT="$PWD/ios-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            build
+
+      - name: Pack unsigned ipa
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find "$PWD/ios-build/Release-iphoneos" -maxdepth 1 -name "*.app" | head -n 1)
+          echo "App: $APP_PATH"
+          mkdir -p dist ipa-src/Payload
+          cp -R "$APP_PATH" ipa-src/Payload/
+          # ipa 本质是根目录带 Payload/ 的 zip
+          (cd ipa-src && zip -qry "../dist/$APP_NAME.ipa" Payload)
+          ls -lh dist
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  jvm:
+    name: JVM (${{ matrix.format }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            format: deb
+          - os: windows-latest
+            format: msi
+          - os: macos-latest
+            format: dmg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install deb packaging deps
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot
+
+      - name: Package desktop app
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:packageDistributionForCurrentOS --stacktrace
+
+      - name: Collect artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          shopt -s nullglob
+          files=(app/build/compose/binaries/main/*/*.${{ matrix.format }})
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::没有找到 .${{ matrix.format }} 产物"
+            ls -R app/build/compose/binaries/main || true
+            exit 1
+          fi
+          cp "${files[0]}" "dist/$APP_NAME.${{ matrix.format }}"
+          ls -lh dist
+
+      - name: Upload desktop package
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-${{ matrix.format }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Update Develop release
+    needs: [android, ios, jvm]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List files
+        run: ls -lh dist
+
+      - name: Publish / update release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$DEV_TAG" > /dev/null 2>&1; then
+            gh release create "$DEV_TAG" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
+          gh release upload "$DEV_TAG" dist/* --clobber
