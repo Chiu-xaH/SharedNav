@@ -1,0 +1,232 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+env:
+  DEV_TAG: "1.0.0-dev01"
+  VERSION: "1.0.0-dev01"
+  JAVA_VERSION: "17"
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
+      - name: Install required SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          # compileSdk = 36（见 gradle/libs.versions.toml: maxAndroidVersion）
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Build release APK
+        shell: bash
+        run: |
+          chmod +x gradlew
+          # 若 R8 在这个工程上另有问题，把 assembleRelease 换成 assembleDebug 即可
+          ./gradlew :app:assembleRelease --stacktrace \
+            -PappVersionName="$VERSION" \
+            -PappVersionCode="${GITHUB_RUN_NUMBER:-1}"
+
+      - name: Collect artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          # README 里的下载链接用的是 app-release.apk，这里保留同名文件
+          cp app/build/outputs/apk/release/app-release.apk dist/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk "dist/SharedNav-$VERSION-android.apk"
+          ls -lh dist
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    name: iOS App
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Build iOS app (unsigned)
+        shell: bash
+        run: |
+          chmod +x gradlew
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -target iosApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -arch arm64 \
+            SYMROOT="$PWD/ios-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            build
+
+      - name: Pack unsigned ipa
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find "$PWD/ios-build/Release-iphoneos" -maxdepth 1 -name "*.app" | head -n 1)
+          echo "App: $APP_PATH"
+          mkdir -p dist ipa-src/Payload
+          cp -R "$APP_PATH" ipa-src/Payload/
+          # ipa 本质是根目录带 Payload/ 的 zip
+          (cd ipa-src && zip -qry "../dist/SharedNav-$VERSION-ios-unsigned.ipa" Payload)
+          # 另外单独给一份 .app，方便直接查看/重签名
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/SharedNav-$VERSION-ios-unsigned.app.zip"
+          ls -lh dist
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  jvm:
+    name: JVM (${{ matrix.format }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            format: deb
+          - os: windows-latest
+            format: msi
+          - os: macos-latest
+            format: dmg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install deb packaging deps
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot
+
+      - name: Package desktop app
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:packageDistributionForCurrentOS --stacktrace
+
+      - name: Collect artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          shopt -s nullglob
+          files=(app/build/compose/binaries/main/*/*.${{ matrix.format }})
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::没有找到 .${{ matrix.format }} 产物"
+            ls -R app/build/compose/binaries/main || true
+            exit 1
+          fi
+          cp "${files[0]}" "dist/SharedNav-$VERSION-desktop-${{ matrix.format }}.${{ matrix.format }}"
+          ls -lh dist
+
+      - name: Upload desktop package
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-${{ matrix.format }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Update dev release
+    needs: [android, ios, jvm]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List files
+        run: ls -lh dist
+
+      # 固定 tag 1.0.0-dev01：Release 不存在就建（指向当前 commit），存在就覆盖同名产物
+      - name: Publish / update release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$DEV_TAG" > /dev/null 2>&1; then
+            gh release create "$DEV_TAG" \
+              --title "Dev Build $DEV_TAG" \
+              --prerelease \
+              --generate-notes \
+              --target "$GITHUB_SHA"
+          fi
+          gh release upload "$DEV_TAG" dist/* --clobber
+          gh release edit "$DEV_TAG" \
+            --title "Dev Build $DEV_TAG" \
+            --notes "每次 push 自动构建并覆盖更新（Dev 构建）。
+          提交：$GITHUB_SHA
+          流水线：$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          产物：app-release.apk（debug 签名）、SharedNav-$VERSION-ios-unsigned.ipa、SharedNav-$VERSION-desktop-{deb,msi,dmg}"

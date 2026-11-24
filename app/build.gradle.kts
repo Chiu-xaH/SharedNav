@@ -81,8 +81,8 @@ android {
         applicationId = appPackageName
         minSdk = Integer.parseInt(libs.versions.minAndroidVersion.get())
         targetSdk = maxAndroidVersion
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() } ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -96,6 +96,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
