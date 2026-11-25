@@ -15,7 +15,9 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
+import com.sharednav.common.util.LogUtil
 import com.sharednav.common.util.lerp
 import com.xah.container.model.ContainerFilledStrategy
 import com.xah.container.model.TiltEffect
@@ -144,6 +146,13 @@ fun SharedContainerOverlay() {
                 isLandscape
             }
 
+            // 容器变化相差系数
+            val rectFactor = if(isHorizontal) {
+                content.height / container.height * container.width / content.width
+            } else {
+                content.width / container.width * container.height / content.height
+            }
+
             Box(
                 modifier = Modifier
                     .graphicsLayer {
@@ -225,11 +234,19 @@ fun SharedContainerOverlay() {
                                         .drawWithCache {
                                             onDrawWithContent {
                                                 val layer = state.containerLayer ?: return@onDrawWithContent
+
+                                                val factor = if(extensionDouble) {
+                                                    1f
+                                                } else {
+                                                    1f / rectFactor / 2f
+                                                }.coerceAtLeast(1f)
+
                                                 val scale = if(isHorizontal) {
                                                     parent.width / container.width
                                                 } else {
                                                     parent.height / container.height
-                                                }
+                                                } * lerp(1f,factor,progress)
+
                                                 withTransform({
                                                     scale(scale, scale)
                                                     if(isHorizontal) {
